@@ -92,23 +92,23 @@ def any_precision_quantize(
     # ------------------- Set cache paths -------------------
 
     tokens_cache_path = (f"{cache_dir}/tokens/"
-                         f"({model_name})-{dataset}_s{num_examples}_blk{seq_len}.pt")
+                         f"{model_name}-{dataset}_s{num_examples}_blk{seq_len}.pt")
 
     gradients_cache_path = (f"{cache_dir}/gradients/"
-                            f"({model_name})-{dataset}_s{num_examples}_blk{seq_len}.pt")
+                            f"{model_name}-{dataset}_s{num_examples}_blk{seq_len}.pt")
     
     if num_groups is not None:
         saliency_cache_path = (f"{cache_dir}/saliency/"
-                            f"({model_name})-{dataset}_s{num_examples}_blk{seq_len}_g{num_groups}")
+                            f"{model_name}-{dataset}_s{num_examples}_blk{seq_len}_g{num_groups}")
     else:
         saliency_cache_path = None
 
     quantized_cache_path = (f"{cache_dir}/quantized/"
-                          f"{'dns-' if dns else ''}({model_name})-w{parent_precision}_orig{seed_precision}"
+                          f"{'dns-' if dns else ''}{model_name}-w{parent_precision}_orig{seed_precision}"
                           f"-{dataset}_s{num_examples}_blk{seq_len}")
 
     model_output_path = (f"{cache_dir}/packed/"
-                         f"anyprec-({model_name})-w{parent_precision}_orig{seed_precision}"
+                         f"anyprec-{model_name}-w{parent_precision}_orig{seed_precision}"
                          f"-{dataset}_s{num_examples}_blk{seq_len}")
 
     logging.info(f"Tokens cache path: {tokens_cache_path}")

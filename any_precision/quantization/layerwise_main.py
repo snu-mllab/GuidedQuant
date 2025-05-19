@@ -46,26 +46,26 @@ def layerwise_nuq(
     model_name = model_string.split("/")[-1]
 
     initialization_cache_path = (f"{cache_dir}/quantized/"
-                          f"({model_name})-w{seed_precision}_orig{seed_precision}"
+                          f"{model_name}-w{seed_precision}_orig{seed_precision}"
                           f"-{dataset}_s{num_examples}_blk{seq_len}")
 
     tokens_cache_path = (f"{cache_dir}/tokens/"
-                         f"({model_name})-{dataset}_s{num_examples}_blk{seq_len}.pt")
+                         f"{model_name}-{dataset}_s{num_examples}_blk{seq_len}.pt")
 
     saliency_cache_path = (f"{cache_dir}/saliency/"
-                          f"({model_name})"
+                          f"{model_name}"
                           f"-{dataset}_s{num_examples}_blk{seq_len}_g{num_groups}")
 
     hessians_cache_path = (f"{cache_dir}/hessians/"
-                          f"({model_name})"
+                          f"{model_name}"
                           f"-{dataset}_s{num_examples}_blk{seq_len}_g{num_groups}{'_nosal' if is_nosal else ''}")
 
     quantized_cache_path = (f"{cache_dir}/layerwise_quantized/"
-                          f"({model_name})-w{seed_precision}"
+                          f"{model_name}-w{seed_precision}"
                           f"-{dataset}_s{num_examples}_blk{seq_len}_g{num_groups}_iter{num_iterations}_cd{cd_cycles}{'_nosal' if is_nosal else ''}")
 
     model_output_path = (f"{cache_dir}/layerwise_packed/"
-                         f"layerwise-({model_name})-w{seed_precision}"
+                         f"layerwise-{model_name}-w{seed_precision}"
                          f"-{dataset}_s{num_examples}_blk{seq_len}_g{num_groups}_iter{num_iterations}_cd{cd_cycles}{'_nosal' if is_nosal else ''}")
 
 
