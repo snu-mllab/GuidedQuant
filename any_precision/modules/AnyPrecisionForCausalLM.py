@@ -1,10 +1,9 @@
 import gc
+import os
 import torch
 import torch.nn as nn
 from tqdm import tqdm
 from transformers import (
-    PreTrainedModel,
-    PretrainedConfig,
     AutoConfig,
     AutoModelForCausalLM,
 )
@@ -12,6 +11,7 @@ from accelerate.big_modeling import (
     init_empty_weights,
     load_checkpoint_and_dispatch,
 )
+from huggingface_hub import snapshot_download
 
 from .AnyPrecisionLinear import AnyPrecisionLinear
 from any_precision.analyzer.analyzer import get_analyzer
@@ -34,6 +34,7 @@ class AnyPrecisionForCausalLM(nn.Module):
             torch_dtype=torch.float16,
             fuse_layers=False,
             trust_remote_code=True,
+            local_dir=None,
     ):
         super().__init__()
 
@@ -66,6 +67,9 @@ class AnyPrecisionForCausalLM(nn.Module):
         self._load_quantized_modules()
 
         self.tie_weights()
+
+        if not os.path.exists(model_path):
+            model_path = snapshot_download(model_path, local_dir=local_dir)
 
         # loads the weights into modules and distributes
         # across available devices automatically
@@ -122,7 +126,8 @@ class AnyPrecisionForCausalLM(nn.Module):
             quant_model_path,
             trust_remote_code=True,
             fuse_layers=False,
-            precisions=None
+            precisions=None,
+            local_dir=None,
     ):
         config = cls._load_config(quant_model_path, trust_remote_code)
 
@@ -132,6 +137,7 @@ class AnyPrecisionForCausalLM(nn.Module):
             config=config,
             fuse_layers=fuse_layers,
             trust_remote_code=trust_remote_code,
+            local_dir=local_dir,
         )
 
         return ap_model
