@@ -50,7 +50,7 @@ We upload the pre-quantized models for Llama-2 and Llama-3 models in the followi
 | LNQ               | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-682c879c799d0ba767b57216)** |
 | LNQ + GuidedQuant | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-gquant-682c89b60907f4a88caf6fa3)** |
 
-You could easily load and test them (e.g., using the following code).
+You could easily load and test them using `AnyPrecisionForCausalLM` class, as shown in the following example.
 
 ```python
 from any_precision.modules.AnyPrecisionForCausalLM import AnyPrecisionForCausalLM
@@ -80,15 +80,17 @@ bash scripts/download_calibration.sh
 
 
 ### Weight-only scalar quantization (SqueezeLLM, LNQ + GuidedQuant)
-Below command saves the gradient and quantizes model with SqueezeLLM (e.g., `bash scripts/run_sqllm.sh meta-llama/Llama-2-7b-hf 2 4`).
+Below command saves the weight gradients and activation gradients (averaged into $NUM_GROUPS groups) and quantizes model with SqueezeLLM.
 ```bash
 bash scripts/run_sqllm.sh $MODEL_NAME $BITS $NUM_GROUPS
+# e.g., bash scripts/run_sqllm.sh meta-llama/Llama-2-7b-hf 2 4
 ```
 <!-- **Note**:  -->
 
-For LNQ + GuidedQuant, run the following command (e.g., `bash scripts/run_lnq.sh meta-llama/Llama-2-7b-hf 2 4`).
+Afterwards, for LNQ + GuidedQuant, run the following command.
 ```bash
 bash scripts/run_lnq.sh $MODEL_NAME $BITS $NUM_GROUPS
+# e.g., bash scripts/run_lnq.sh meta-llama/Llama-2-7b-hf 2 4
 ```
 <!-- **Note**:  -->
 
@@ -102,7 +104,7 @@ To be updated.
 ### Evaluation
 
 Run the following command to evaluate the performance of the pre-trained / quantized / pre-quantized models.
-```python
+```bash
 python run_eval.py
 ```
 
