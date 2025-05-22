@@ -32,4 +32,10 @@ void lutgemm_gemv(
     int group_size
 );
 
+torch::Tensor anyprec_dequant(
+    torch::Tensor qweight,
+    torch::Tensor lut,
+    int bitwidth
+);
+
 #endif 

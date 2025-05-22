@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <torch/extension.h>
 #include "gemv.h"
 #include "anyprec.h"
 #include "lutgemm.h"
@@ -16,6 +17,14 @@
 #define NUM_THREADS 256
 #define M_TILE_SIZE 2048
 
+void cudaError(cudaError_t errCode, const char * filename, int linenum) {
+    if(errCode != cudaSuccess) {
+        printf("Error : %s (%s : %d)\n", cudaGetErrorString(errCode), filename, linenum);
+        exit(EXIT_FAILURE);
+    }
+}
+
+#define HANDLE_ERROR(err) (cudaError(err, __FILE__, __LINE__))
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                     ANYPREC
@@ -91,8 +100,37 @@ void anyprec_gemv(
     torch::Tensor lut,
     int bitwidth
 ) {
+    HANDLE_ERROR(cudaSetDevice(qweight.device().index()));
+
     cudaStream_t stream = at::cuda::getCurrentCUDAStream();
     anyprec_gemv_stream(input, output, qweight, lut, bitwidth, stream);
+}
+
+torch::Tensor anyprec_dequant(
+    torch::Tensor qweight,
+    torch::Tensor lut,
+    int bitwidth
+) {
+    HANDLE_ERROR(cudaSetDevice(qweight.device().index()));
+
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+
+    const int N = qweight.size(1);
+    const int K = qweight.size(2) * 32;
+
+    auto options = torch::TensorOptions().dtype(torch::kHalf).device(qweight.device());
+    at::Tensor weight = torch::empty({N, K}, options);
+
+    anyprec_dequant_kbit(
+        (uint32_t*) qweight.data_ptr<int32_t>(),
+        N, K,
+        (__half*) lut.data_ptr<at::Half>(),
+        (__half*) weight.data_ptr<at::Half>(),
+        bitwidth,
+        stream
+    );
+
+    return weight;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

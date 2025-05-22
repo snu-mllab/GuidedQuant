@@ -20,10 +20,10 @@ setup(
                     "-U__CUDA_NO_BFLOAT16_CONVERSIONS__",
                     "-U__CUDA_NO_BFLOAT162_OPERATORS__",
                     "-U__CUDA_NO_BFLOAT162_CONVERSIONS__",
-                    "-gencode=arch=compute_90,code=sm_90",
-                    "-gencode=arch=compute_89,code=sm_89",
-                    "-gencode=arch=compute_86,code=sm_86",
-                    "-gencode=arch=compute_80,code=sm_80",
+                    "-gencode=arch=compute_90,code=sm_90",   # H100
+                    "-gencode=arch=compute_89,code=sm_89",   # Ada
+                    "-gencode=arch=compute_86,code=sm_86",   # GA10x
+                    "-gencode=arch=compute_80,code=sm_80",   # A100
                 ]
             },
         ),

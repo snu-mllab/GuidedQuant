@@ -12,5 +12,6 @@
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
 	m.def("anyprec_gemv", &anyprec_gemv, "ANYPREC GEMV");
+	m.def("anyprec_dequant", &anyprec_dequant, "ANYPREC DEQUANT");
 	m.def("lutgemm_gemv", &lutgemm_gemv, "LUTGEMM GEMV");
 }

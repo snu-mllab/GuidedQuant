@@ -2,17 +2,24 @@ import torch
 import torch.nn as nn
 
 try:
-    from any_precision_ext import matmul_kbit, dequant_kbit
+    import ap_gemv
 except:
-    matmul_kbit, dequant_kbit = None, None
+    ap_gemv = None
 
+@torch.library.custom_op("plugin::anyprec_gemv", mutates_args={"output"})
+def anyprec_gemv(x: torch.Tensor, q_weight: torch.Tensor, lut: torch.Tensor, output:torch.Tensor, bitwidth:int) -> None:
+    ap_gemv.anyprec_gemv(x, output, q_weight, lut, bitwidth)
+
+@anyprec_gemv.register_fake
+def _(x, q_weight, lut, output, bitwidth):
+    return None
 
 class AnyPrecisionLinear(nn.Module):
     def __init__(self, in_features, out_features, supported_bits, bias=True, precisions=None, device=None,
                  dtype=None):
         super().__init__()
-        if dequant_kbit is None or matmul_kbit is None:
-            raise ModuleNotFoundError('Please install any precision CUDA kernel extension from modules/kernels.')
+        if ap_gemv is None:
+            raise ModuleNotFoundError("ap_gemv is not installed. Please install `ap_gemv` kernel.")
         if precisions is None:
             precisions = supported_bits
         if not isinstance(precisions, list):
@@ -45,6 +52,8 @@ class AnyPrecisionLinear(nn.Module):
         else:
             self.bias = None
 
+        self.output = torch.zeros((1, 1, self.out_features), dtype=torch.float16, device='cuda')
+
     def prune_precisions(self):
         self.qweight = self.qweight[:max(self.precisions)]
         for bit in self.supported_bits:
@@ -57,11 +66,12 @@ class AnyPrecisionLinear(nn.Module):
         else:
             w_bits = self.precision
 
-        if x.numel() // x.shape[-1] > 8:
-            weight = dequant_kbit(self.qweight, self._buffers[f'lut{w_bits}'], w_bits)
+        if x.numel() // x.shape[-1] > 1:
+            weight = ap_gemv.anyprec_dequant(self.qweight, self._buffers[f'lut{w_bits}'], w_bits)
             x = torch.matmul(x, weight.T)
         else:
-            x = matmul_kbit(x, self.qweight, self._buffers[f'lut{w_bits}'], w_bits)
+            anyprec_gemv(x, self.qweight, self._buffers[f'lut{w_bits}'], self.output, w_bits)
+            x = self.output
 
         if self.bias is not None:
             x += self.bias

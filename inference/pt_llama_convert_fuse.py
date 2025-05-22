@@ -20,7 +20,7 @@ model_name = args.model_name
 model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-model.save_pretrained(ckpt_dir, safe_serialization=False, max_shard_size="40GB")
+model.save_pretrained(ckpt_dir, safe_serialization=False, max_shard_size="160GB")
 tokenizer.save_pretrained(ckpt_dir)
 
 

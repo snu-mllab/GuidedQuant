@@ -21,14 +21,21 @@
 
 # Installation 
 
-1. Install the requirements (we used Python 3.11 version).
+1. Install the requirements (we used Python 3.11 / CUDA 12.4 version).
       ```bash
       pip install -r requirements.txt
       ```
-2. Install the Any-Precision CUDA kernels.
+2. Install the Any-Precision-LLM CUDA kernels.
+
+      Install either from source (this might take a while),
       ```bash
-      cd anyprecision/modules/kernels
-      pip install .
+      cd inference/ap_gemv
+      bash install.sh
+      ```
+      or from pre-built binaries,
+      ```bash
+      # CUDA 12.4
+      pip install ap-gemv -i https://jusjinuk.me/whl/cu124
       ```
 3. (Optional) To reproduce weight-only vector & weight-and-activation quantization results, install the following dependencies.
       ```bash
@@ -56,7 +63,7 @@ You could easily load and test them using `AnyPrecisionForCausalLM` class, as sh
 from any_precision.modules.AnyPrecisionForCausalLM import AnyPrecisionForCausalLM
 from transformers import AutoTokenizer, TextStreamer
 
-# method = LNQ + GuidedQuant / bits = 3 / num_groups = 1
+# model: Llama-3-8B / method = LNQ + GuidedQuant / bits = 3 / num_groups = 1
 quantized_model_name = "jusjinuk/layerwise-Meta-Llama-3-8B-w3-redpajama_s1024_blk4096_g1_iter3_cd4"
 model = AnyPrecisionForCausalLM.from_quantized(quantized_model_name)
 tokenizer = AutoTokenizer.from_pretrained(quantized_model_name)
@@ -69,6 +76,37 @@ model.generate(inputs["input_ids"],
     max_length=200, do_sample=True, temperature=1.0, streamer=streamer
 )
 ```
+
+# Inference Speed-up
+We provide the **[demo code (70 LOC)](./demo.py)** that uses `torch.compile` with Hugging Face `generate` function, showing the speed-up of LNQ + GuidedQuant quantized model, using Any-Precision-LLM kernel (`ap-gemv` kernel). This demo is inspired by the demo code of [Any-Precision-LLM](https://github.com/SNU-ARC/any-precision-llm).
+```bash
+# pre-trained Llama-3-8B
+python demo.py
+# LNQ + GuidedQuant quantized Llama-3-8B (bits=3)
+python demo.py -q
+```
+
+In the paper, we report the further-optimized throughput of each model obtained by fusing the Q/K/V layer and the Up/Gate layer within every Transformer block.
+To reproduce these results, first do `cd inference/`, and then
+
+1. For quantized models, run
+      ```bash
+      python sqllm_llama_convert_fuse.py --ckpt_dir <path_to_quantized_ckpt> --bitwidth <bitwidth>
+      python generate.py --compile 2 --num_samples 5 \
+            --model_name ${model} --bitwidth ${BITWIDTH} --dtype "float16" \
+            --checkpoint_path ${checkpoint_path} \
+            --backend ap --max_new_tokens 100
+      ```
+
+2. For pre-trained models (without quantization), run
+      ```bash
+      python pt_llama_convert_fuse.py --ckpt_dir <save_path> --model_name <huggingface_model_name>
+      python generate.py --compile 2 --num_samples 5 \
+            --model_name ${model} --bitwidth 16 --dtype "float16" \
+            --checkpoint_path ${checkpoint_path} \
+            --max_new_tokens 100
+      ```
+
 
 # Usage
 
