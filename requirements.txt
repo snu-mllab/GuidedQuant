@@ -1,9 +1,9 @@
 numpy==1.26.4
 torch==2.5.1
-transformers==4.52.2
+transformers==4.47.1
 tqdm==4.66.6
 numba==0.60.0
-datasets==3.6.0
+datasets==3.2.0
 accelerate==0.29.3
 setuptools==68.2.2
 pandas==2.2.3
@@ -13,4 +13,4 @@ attributedict==0.3.0
 flash1dkmeans==0.1.4
 lm-eval==0.4.3
 peft==0.13.2
-huggingface-hub==0.31.4
+huggingface-hub==0.26.2
