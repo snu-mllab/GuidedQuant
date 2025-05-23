@@ -16,6 +16,7 @@ if args.quantized:
 else:
     model_name = "meta-llama/Meta-Llama-3-8B"
     model = AutoModelForCausalLM.from_pretrained(model_name, device_map="cuda", torch_dtype=torch.float16)
+print(f"Model: {model_name}")
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 streamer = TextStreamer(tokenizer)
@@ -23,14 +24,14 @@ streamer = TextStreamer(tokenizer)
 prompt = "Harry, Ron, and Hermione are"
 inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
-cache_size = 200
+cache_size = 1000
 
 # Compile the decoding phase with static cache
 print("~~~~~~~ Compiling model & Warm up ~~~~~~~")
 dummy = torch.randint(0, 1, (1, 1)).to(model.device)
-max_new_tokens = cache_size - dummy.shape[1]
+new_tokens = cache_size - dummy.shape[1]
 output = model.generate(dummy, 
-    max_new_tokens=max_new_tokens, 
+    max_new_tokens=new_tokens, 
     do_sample=False, 
     temperature=1.0,
     top_p=1.0,
@@ -38,18 +39,18 @@ output = model.generate(dummy,
     attention_mask=torch.ones_like(dummy),
     cache_implementation="static",
 )
-print("~~~~~~~ Compilation complete ~~~~~~~\n")
-
-prompt = "Harry, Ron, and Hermione are"
-inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+print(f"~~~~~~~ Compilation complete ~~~~~~~\n")
+print(f"Prompt: {prompt}\n")
+input("Press Enter to start generation...")
 
 torch.cuda.synchronize()
 start_time = time.time()
 
-max_new_tokens = cache_size - inputs["input_ids"].shape[1]
+new_tokens = cache_size - inputs["input_ids"].shape[1]
 output = model.generate(inputs["input_ids"], 
-    max_new_tokens=max_new_tokens, 
-    do_sample=False, 
+    max_new_tokens=new_tokens, 
+    min_new_tokens=new_tokens,
+    do_sample=True, 
     pad_token_id=tokenizer.eos_token_id,
     temperature=1.0,
     top_p=1.0,
