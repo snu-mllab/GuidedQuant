@@ -55,7 +55,7 @@ def get_inps(
         )
         for i in range(len(devices))
     ]
-    forward_arg_names = ["attention_mask", "position_ids"]
+    forward_arg_names = ["attention_mask", "position_ids", "position_embeddings"]
 
     cache = {"i": 0}
 
@@ -140,12 +140,15 @@ def update_outs_parallel(
     kwargs_by_device = []
     for i in range(len(devices)):
         inputs_by_device.append((layer_replicas[i], inps[i], outs[i], compute_mse, is_after_quant))
-        kwargs_by_device.append(
-            {
-                k: (v.to(devices[i], non_blocking=True) if isinstance(v, torch.Tensor) else v)
-                for k, v in forward_args.items()
-            }
-        )
+        processed_args = {}
+        for k, v in forward_args.items():
+            if isinstance(v, torch.Tensor):
+                processed_args[k] = v.to(devices[i], non_blocking=True)
+            elif isinstance(v, tuple) and all(isinstance(x, torch.Tensor) for x in v):
+                processed_args[k] = tuple(x.to(devices[i], non_blocking=True) for x in v)
+            else:
+                processed_args[k] = v
+        kwargs_by_device.append(processed_args)
     out_losses_by_device: Sequence[Sequence[float]] = torch.nn.parallel.parallel_apply(
         funcs_by_device, inputs_by_device, kwargs_by_device, devices=devices
     )
@@ -292,7 +295,15 @@ def init_saliency_engines_single_wrapper(
     # 3) Wrap sub-layers
     _wrap_sublayers(layer, engines)
 
-    forward_args = {k: (v.to(device, non_blocking=True) if isinstance(v, torch.Tensor) else v) for k, v in forward_args.items()}
+    processed_args = {}
+    for k, v in forward_args.items():
+        if isinstance(v, torch.Tensor):
+            processed_args[k] = v.to(device, non_blocking=True)
+        elif isinstance(v, tuple) and all(isinstance(x, torch.Tensor) for x in v):
+            processed_args[k] = tuple(x.to(device, non_blocking=True) for x in v)
+        else:
+            processed_args[k] = v
+    forward_args = processed_args
 
     with torch.no_grad():
         # 4) Forward pass over 'inp'
@@ -338,6 +349,8 @@ def init_saliency_engines_parallel_wrapper(
         for k,v in forward_args.items():
             if isinstance(v, torch.Tensor):
                 dev_kwargs[k] = v.to(dev, non_blocking=True)
+            elif isinstance(v, tuple) and all(isinstance(x, torch.Tensor) for x in v):
+                dev_kwargs[k] = tuple(x.to(dev, non_blocking=True) for x in v)
             else:
                 dev_kwargs[k] = v
         kwargs_by_device.append(dev_kwargs)
