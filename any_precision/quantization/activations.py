@@ -382,7 +382,7 @@ def accumulate_saliency_weighted_hessians(
     saliency_path: str,             # Path containing l{L}.pt => { sublayer_name -> saliency Tensor }
     output_folder: str,
     num_groups: int
-):
+) -> bool:
     """
     1) get_inps(...) => inps, forward_args
     2) Prepare outs
@@ -394,13 +394,15 @@ def accumulate_saliency_weighted_hessians(
          the Hessians in .XTX
        - save the final Hessians to output_folder/l{L}.pt
        - swap inps, outs
+    
+    Returns True if the hessians are already cached, False otherwise.
     """
 
     if output_folder and os.path.exists(output_folder):
         if all(os.path.exists(os.path.join(output_folder, f"l{i}.pt")) 
                 for i in range(len(analyzer.get_layers()))):
             logging.info(f"Cached hessians found in {output_folder}")
-            return output_folder
+            return True
 
     # 0) Setup devices
     if torch.cuda.is_available():
@@ -565,6 +567,7 @@ def accumulate_saliency_weighted_hessians(
 
     pb.close()
     logging.info("Done accumulating saliency-weighted Hessians for all layers.")
+    return False
 
 
 ##############################################################################
