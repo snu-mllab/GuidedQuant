@@ -94,7 +94,10 @@ python demo.py -q
 ```
 
 In the paper, we report the further-optimized throughput of each model obtained by fusing the Q/K/V layer and the Up/Gate layer within every Transformer block.
-To reproduce these results, first do `cd inference/`, and then
+
+<details>
+<summary><b>Click to expand the commands for reproducing the throughput results in the paper</b></summary>
+First, do `cd inference/`, and then
 
 1. For quantized models, run
       ```bash
@@ -113,7 +116,7 @@ To reproduce these results, first do `cd inference/`, and then
             --checkpoint_path ${checkpoint_path} \
             --max_new_tokens 100
       ```
-
+</details>
 
 # Usage
 
@@ -140,7 +143,11 @@ bash scripts/run_lnq.sh $MODEL_NAME $BITS $NUM_GROUPS
 <!-- **Note**:  -->
 
 
-### Weight-only vector quantization (QTIP + GuidedQuant)
+### Weight-only vector (QTIP + GuidedQuant)
+
+To be updated.
+
+### Weight-and-activation quantization (SpinQuant + GuidedQuant)
 
 To be updated.
 
