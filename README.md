@@ -84,7 +84,6 @@ model.generate(inputs,
 ```
 
 # Inference Speed-up
-![Demo gif](https://github.com/snu-mllab/GuidedQuant/releases/download/v1.0.0/demo.gif)
 
 We provide the **[demo code (~80 LOC)](./demo.py)** that uses `torch.compile` with Hugging Face `generate` function, showing the speed-up of LNQ + GuidedQuant quantized model, using Any-Precision-LLM kernel (`ap-gemv` kernel). This demo is inspired by the demo code of [Any-Precision-LLM](https://github.com/SNU-ARC/any-precision-llm).
 ```bash
