@@ -63,26 +63,34 @@ You could easily load and test them using `AnyPrecisionForCausalLM` class, as sh
 from any_precision.modules.AnyPrecisionForCausalLM import AnyPrecisionForCausalLM
 from transformers import AutoTokenizer, TextStreamer
 
-# model: Llama-3-8B / method = LNQ + GuidedQuant / bits = 3 / num_groups = 1
-quantized_model_name = "jusjinuk/layerwise-Meta-Llama-3-8B-w3-redpajama_s1024_blk4096_g1_iter3_cd4"
+# model: Llama-3.1-8B-Instruct / method = LNQ + GuidedQuant / bits = 2 / num_groups = 1
+quantized_model_name = "jusjinuk/layerwise-Llama-3.1-8B-Instruct-w2-redpajama_s1024_blk4096_g1_iter3_cd4"
 model = AnyPrecisionForCausalLM.from_quantized(quantized_model_name)
 tokenizer = AutoTokenizer.from_pretrained(quantized_model_name)
 streamer = TextStreamer(tokenizer)
 
-prompt = "Harry, Ron, and Hermione are"
-inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+prompt = "Write me a story about Harry, Ron, and Hermione.\n"
+chat = [
+    {"role": "system", "content": "You are a helpful, creative, and engaging storyteller.\n"},
+    {"role": "user", "content": prompt},
+]
 
-model.generate(inputs["input_ids"], 
+inputs = tokenizer.apply_chat_template(
+    chat, tokenize=True, return_tensors="pt", add_generation_prompt=True).to(model.device)
+
+model.generate(inputs, 
     max_length=200, do_sample=True, temperature=1.0, streamer=streamer
 )
 ```
 
 # Inference Speed-up
-We provide the **[demo code (70 LOC)](./demo.py)** that uses `torch.compile` with Hugging Face `generate` function, showing the speed-up of LNQ + GuidedQuant quantized model, using Any-Precision-LLM kernel (`ap-gemv` kernel). This demo is inspired by the demo code of [Any-Precision-LLM](https://github.com/SNU-ARC/any-precision-llm).
+![Demo gif](https://github.com/snu-mllab/GuidedQuant/releases/download/v1.0.0/demo.gif)
+
+We provide the **[demo code (~80 LOC)](./demo.py)** that uses `torch.compile` with Hugging Face `generate` function, showing the speed-up of LNQ + GuidedQuant quantized model, using Any-Precision-LLM kernel (`ap-gemv` kernel). This demo is inspired by the demo code of [Any-Precision-LLM](https://github.com/SNU-ARC/any-precision-llm).
 ```bash
-# pre-trained Llama-3-8B
+# pre-trained Llama-3.1-8B-Instruct
 python demo.py
-# LNQ + GuidedQuant quantized Llama-3-8B (bits=3)
+# LNQ + GuidedQuant quantized Llama-3.1-8B-Instruct (bits=2)
 python demo.py -q
 ```
 

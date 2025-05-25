@@ -11,20 +11,27 @@ parser.add_argument('-q', '--quantized', action='store_true', help='Use quantize
 args = parser.parse_args()
 
 if args.quantized:
-    model_name = "jusjinuk/layerwise-Meta-Llama-3-8B-w3-redpajama_s1024_blk4096_g1_iter3_cd4"
+    model_name = "jusjinuk/layerwise-Llama-3.1-8B-Instruct-w2-redpajama_s1024_blk4096_g1_iter3_cd4"
     model = AnyPrecisionForCausalLM.from_quantized(model_name)
 else:
-    model_name = "meta-llama/Meta-Llama-3-8B"
+    model_name = "meta-llama/Llama-3.1-8B-Instruct"
     model = AutoModelForCausalLM.from_pretrained(model_name, device_map="cuda", torch_dtype=torch.float16)
 print(f"Model: {model_name}")
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 streamer = TextStreamer(tokenizer)
 
-prompt = "Harry, Ron, and Hermione are"
-inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+prompt = "Write me a story about Harry, Ron, and Hermione.\n"
+chat = [
+    {"role": "system", "content": "You are a helpful, creative, and engaging storyteller.\n"},
+    {"role": "user", "content": prompt},
+]
 
-cache_size = 1000
+inputs_text = tokenizer.apply_chat_template(
+    chat, tokenize=False, add_generation_prompt=True)
+inputs = tokenizer(inputs_text, return_tensors="pt").to(model.device)
+
+cache_size = 800
 
 # Compile the decoding phase with static cache
 print("~~~~~~~ Compiling model & Warm up ~~~~~~~")
@@ -32,7 +39,7 @@ dummy = torch.randint(0, 1, (1, 1)).to(model.device)
 new_tokens = cache_size - dummy.shape[1]
 output = model.generate(dummy, 
     max_new_tokens=new_tokens, 
-    do_sample=False, 
+    do_sample=True, 
     temperature=1.0,
     top_p=1.0,
     pad_token_id=tokenizer.eos_token_id,
