@@ -21,6 +21,7 @@ def load_model(model_str_or_model, dtype=torch.float16):
 def dispatch_model(model):
     if model.config.architectures[0] == 'LlamaForCausalLM':
         model.model.__class__ = SplittedLlamaModel
+        model.model.config.use_cache = False
         model.model.set_devices()
         model.lm_head.to("cuda:0")
         return model
