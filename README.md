@@ -49,7 +49,8 @@
 
 
 # Pre-quantized Models
-We upload the pre-quantized models for Llama-2 and Llama-3 models in the following Hugging Face collections.
+
+### Llama-2 and Llama-3 models.
 
 | Method | Link |
 |:---|:---:|
@@ -57,19 +58,27 @@ We upload the pre-quantized models for Llama-2 and Llama-3 models in the followi
 | LNQ               | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-682c879c799d0ba767b57216)** |
 | LNQ + GuidedQuant | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-gquant-682c89b60907f4a88caf6fa3)** |
 
+### Instruction-tuned models.
+
+| Type | Models | Link |
+|:---|:---|:---:|
+| Instruction-tuned models        | `Llama-3.1-8B-Instruct`, `Llama-3.3-70B-Instruct` | **[Link](https://huggingface.co/collections/jusjinuk/instruction-tuned-models-guidedquant-68334269c44cd3eb21f7bd61)** |
+
+### Demo
+
 You could easily load and test them using `AnyPrecisionForCausalLM` class, as shown in the following example.
 
 ```python
 from any_precision.modules.AnyPrecisionForCausalLM import AnyPrecisionForCausalLM
 from transformers import AutoTokenizer, TextStreamer
 
-# model: Llama-3.1-8B-Instruct / method = LNQ + GuidedQuant / bits = 2 / num_groups = 1
-quantized_model_name = "jusjinuk/layerwise-Llama-3.1-8B-Instruct-w2-redpajama_s1024_blk4096_g1_iter3_cd4"
+# model: Llama-3.3-70B-Instruct / method = LNQ + GuidedQuant / bits = 2 / num_groups = 1
+quantized_model_name = "jusjinuk/layerwise-Llama-3.3-70B-Instruct-w2-redpajama_s1024_blk4096_g1_iter3_cd4"
 model = AnyPrecisionForCausalLM.from_quantized(quantized_model_name)
 tokenizer = AutoTokenizer.from_pretrained(quantized_model_name)
 streamer = TextStreamer(tokenizer)
 
-prompt = "Write me a story about Harry, Ron, and Hermione.\n"
+prompt = "Write me a short story about Harry, Ron, and Hermione.\n"
 chat = [
     {"role": "system", "content": "You are a helpful, creative, and engaging storyteller.\n"},
     {"role": "user", "content": prompt},
@@ -79,24 +88,27 @@ inputs = tokenizer.apply_chat_template(
     chat, tokenize=True, return_tensors="pt", add_generation_prompt=True).to(model.device)
 
 model.generate(inputs, 
-    max_length=200, do_sample=True, temperature=1.0, streamer=streamer
+    max_new_tokens=800, do_sample=False, temperature=1.0, streamer=streamer, pad_token_id=tokenizer.eos_token_id
 )
 ```
 
 # Inference Speed-up
 
-We provide the **[demo code (~80 LOC)](./demo.py)** that uses `torch.compile` with Hugging Face `generate` function, showing the speed-up of LNQ + GuidedQuant quantized model, using Any-Precision-LLM kernel (`ap-gemv` kernel). This demo is inspired by the demo code of [Any-Precision-LLM](https://github.com/SNU-ARC/any-precision-llm).
+We provide a simple [inference script (~80 LOC)](./inference_example.py) that uses `torch.compile` with Hugging Face `generate` function, showing the speed-up of LNQ + GuidedQuant quantized model, using Any-Precision-LLM kernel (`ap-gemv` kernel). This example is inspired by the demo code of [Any-Precision-LLM](https://github.com/SNU-ARC/any-precision-llm).
 ```bash
 # pre-trained Llama-3.1-8B-Instruct
-python demo.py
+# ~43 tok/s in one RTX 3090
+python inference_example.py
+
 # LNQ + GuidedQuant quantized Llama-3.1-8B-Instruct (bits=2)
-python demo.py -q
+# ~130 tok/s in one RTX 3090
+python inference_example.py -q
 ```
 
 In the paper, we report the further-optimized throughput of each model obtained by fusing the Q/K/V layer and the Up/Gate layer within every Transformer block.
 
 <details>
-<summary><b>Click to expand the commands for reproducing the throughput results in the paper</b></summary>
+<summary><b>Click to expand the commands for reproducing the throughput results in the paper.</b></summary>
 First, do `cd inference/`, and then
 
 1. For quantized models, run
