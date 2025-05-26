@@ -8,6 +8,7 @@
 <p align="center">
 <a href="https://arxiv.org/abs/2505.07004"><img src="https://img.shields.io/badge/arXiv-2505.07004-b31b1b.svg"></a>
 <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow"></a>
+<a href="https://jusjinuk.me/blog/guidedquant/"><img src="https://img.shields.io/badge/Blog-GuidedQuant-blue"></a>
 </p>
 
 # News
