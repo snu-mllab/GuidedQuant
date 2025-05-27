@@ -79,9 +79,9 @@ model = AnyPrecisionForCausalLM.from_quantized(quantized_model_name)
 tokenizer = AutoTokenizer.from_pretrained(quantized_model_name)
 streamer = TextStreamer(tokenizer)
 
-prompt = "Write me a short story about Harry, Ron, and Hermione.\n"
+prompt = "Write me a short and concise story about Harry, Ron, and Hermione.\n"
 chat = [
-    {"role": "system", "content": "You are a helpful, creative, and engaging storyteller.\n"},
+    {"role": "system", "content": "You are a helpful assistant.\n"},
     {"role": "user", "content": prompt},
 ]
 
@@ -89,7 +89,7 @@ inputs = tokenizer.apply_chat_template(
     chat, tokenize=True, return_tensors="pt", add_generation_prompt=True).to(model.device)
 
 model.generate(inputs, 
-    max_new_tokens=800, do_sample=False, temperature=1.0, streamer=streamer, pad_token_id=tokenizer.eos_token_id
+    max_new_tokens=200, do_sample=False, temperature=1.0, streamer=streamer, pad_token_id=tokenizer.eos_token_id
 )
 ```
 
