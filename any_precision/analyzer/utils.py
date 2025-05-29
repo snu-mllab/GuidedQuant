@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM, PreTrainedModel, AutoTokenizer, PreTrainedTokenizerBase
-from .splitted_models.llama import SplittedLlamaModel
+from .splitted_models import SplittedLlamaModel, SplittedQwen3Model
 
 
 def load_model(model_str_or_model, dtype=torch.float16):
@@ -21,6 +21,12 @@ def load_model(model_str_or_model, dtype=torch.float16):
 def dispatch_model(model):
     if model.config.architectures[0] == 'LlamaForCausalLM':
         model.model.__class__ = SplittedLlamaModel
+        model.model.config.use_cache = False
+        model.model.set_devices()
+        model.lm_head.to("cuda:0")
+        return model
+    elif model.config.architectures[0] == 'Qwen3ForCausalLM':
+        model.model.__class__ = SplittedQwen3Model
         model.model.config.use_cache = False
         model.model.set_devices()
         model.lm_head.to("cuda:0")
