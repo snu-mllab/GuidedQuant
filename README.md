@@ -51,13 +51,13 @@
 
 # Pre-quantized Models
 
-### Llama-2 and Llama-3 models.
+### Pre-trained models.
 
-| Method | Link |
-|:---|:---:|
-| SqueezeLLM        | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-squeezellm-682ca2b6d71351d9bd94e94d)** |
-| LNQ               | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-682c879c799d0ba767b57216)** |
-| LNQ + GuidedQuant | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-gquant-682c89b60907f4a88caf6fa3)** |
+| Type | Models | Method | Link |
+|:---|:---|:---|:---:|
+|Pre-trained models | `Llama-2-7b-hf`, `Llama-2-13b-hf`, `Llama-2-70b-hf`, `Meta-Llama-3-8B`, `Meta-Llama-3-70B` | SqueezeLLM        | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-squeezellm-682ca2b6d71351d9bd94e94d)** |
+|      | | LNQ               | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-682c879c799d0ba767b57216)** |
+|      | | LNQ + GuidedQuant | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-gquant-682c89b60907f4a88caf6fa3)** |
 
 ### Instruction-tuned models.
 
@@ -67,14 +67,14 @@
 
 ### Demo
 
-You could easily load and test them using `AnyPrecisionForCausalLM` class, as shown in the following example.
+You could easily load and test them using `AnyPrecisionForCausalLM` class, as shown in the following example (runs on one RTX 3090).
 
 ```python
 from any_precision.modules.AnyPrecisionForCausalLM import AnyPrecisionForCausalLM
 from transformers import AutoTokenizer, TextStreamer
 
-# model: Llama-3.3-70B-Instruct / method = LNQ + GuidedQuant / bits = 2 / num_groups = 1
-quantized_model_name = "jusjinuk/layerwise-Llama-3.3-70B-Instruct-w2-redpajama_s1024_blk4096_g1_iter3_cd4"
+# model: Llama-3.3-70B-Instruct / method = GuidedQuant + LNQ / bits = 2 / num_groups = 1
+quantized_model_name = "jusjinuk/Llama-3.3-70B-Instruct-2bit-GuidedQuant-LNQ"
 model = AnyPrecisionForCausalLM.from_quantized(quantized_model_name)
 tokenizer = AutoTokenizer.from_pretrained(quantized_model_name)
 streamer = TextStreamer(tokenizer)

@@ -11,7 +11,7 @@ parser.add_argument('-q', '--quantized', action='store_true', help='Use quantize
 args = parser.parse_args()
 
 if args.quantized:
-    model_name = "jusjinuk/layerwise-Llama-3.1-8B-Instruct-w2-redpajama_s1024_blk4096_g1_iter3_cd4"
+    model_name = "jusjinuk/Llama-3.1-8B-Instruct-2bit-GuidedQuant-LNQ"
     model = AnyPrecisionForCausalLM.from_quantized(model_name)
 else:
     model_name = "meta-llama/Llama-3.1-8B-Instruct"
