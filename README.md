@@ -51,19 +51,10 @@
 
 # Pre-quantized Models
 
-### Pre-trained models.
-
-| Type | Models | Method | Link |
-|:---|:---|:---|:---:|
-|Pre-trained models | `Llama-2-7b-hf`, `Llama-2-13b-hf`, `Llama-2-70b-hf`, `Meta-Llama-3-8B`, `Meta-Llama-3-70B` | SqueezeLLM        | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-squeezellm-682ca2b6d71351d9bd94e94d)** |
-|      | | LNQ               | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-682c879c799d0ba767b57216)** |
-|      | | LNQ + GuidedQuant | **[Link](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-gquant-682c89b60907f4a88caf6fa3)** |
-
-### Instruction-tuned models.
-
-| Type | Models | Link |
-|:---|:---|:---:|
+| Type | Models | 🤗 Hugging Face |
+|:---|:---|:---|
 | Instruction-tuned models        | `Llama-3.1-8B-Instruct`, `Llama-3.3-70B-Instruct` | **[Link](https://huggingface.co/collections/jusjinuk/instruction-tuned-models-guidedquant-68334269c44cd3eb21f7bd61)** |
+|Pre-trained models | `Llama-2-7b-hf`, `Llama-2-13b-hf`, `Llama-2-70b-hf`, `Meta-Llama-3-8B`, `Meta-Llama-3-70B` | **[SqueezeLLM](https://huggingface.co/collections/jusjinuk/guidedquant-squeezellm-682ca2b6d71351d9bd94e94d)**, <br> **[LNQ](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-682c879c799d0ba767b57216)**, <br> **[LNQ+GuidedQuant](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-gquant-682c89b60907f4a88caf6fa3)** |
 
 ### Demo
 
