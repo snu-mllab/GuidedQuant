@@ -230,7 +230,12 @@ class SaliencyEngine(nn.Module):
 
         sal_weighted_X = torch.einsum("nj,ng->njg", X, S)
         block = torch.einsum("ni,njg->ijg", X, sal_weighted_X)
-        self.XTX.add_(block)
+        if torch.isnan(block).any():
+            raise ValueError(f"batch {self.index} XTX is nan")
+        else:
+            self.XTX.add_(block)
+        if torch.isnan(self.XTX).any():
+            raise ValueError(f"batch {self.index} XTX is nan")
 
     def __repr__(self):
         return f"SaliencyEngine(XTX.shape={tuple(self.XTX.shape)}, index/nsamples={self.index}/{self.nsamples})"
