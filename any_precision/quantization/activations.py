@@ -4,11 +4,11 @@ from tqdm.auto import trange
 import os
 import logging
 from .config import *
-from .utils import get_progress_bar
 from any_precision.analyzer.analyzer import ModelAnalyzer
-from typing import List, Tuple, Literal, Optional, Sequence, Dict, Callable, Iterator, Any
+from typing import List, Tuple, Sequence, Dict
 from itertools import chain
 from tqdm import tqdm
+from transformers import Gemma3Config
 
 
 @torch.no_grad()
@@ -47,15 +47,24 @@ def get_inps(
 
     dtype = next(iter(model.parameters())).dtype
     nsamples_per_device = (len(data) - 1) // len(devices) + 1
+    if isinstance(model.config, Gemma3Config):
+        hidden_size = model.config.text_config.hidden_size
+    else:
+        assert hasattr(model.config, "hidden_size"), f"Model config has no hidden_size: {model.config}"
+        hidden_size = model.config.hidden_size
+
     inps = [
         torch.zeros(
-            (min(nsamples_per_device, len(data) - i * nsamples_per_device), model_seqlen, model.config.hidden_size),
+            (min(nsamples_per_device, len(data) - i * nsamples_per_device), model_seqlen, hidden_size),
             dtype=dtype,
             device=devices[i] if not offload_activations else "cpu",
         )
         for i in range(len(devices))
     ]
-    forward_arg_names = ["attention_mask", "position_ids", "position_embeddings"]
+    if isinstance(model.config, Gemma3Config):
+        forward_arg_names = ["attention_mask", "position_ids", "position_embeddings_global", "position_embeddings_local", "cache_position"]
+    else:
+        forward_arg_names = ["attention_mask", "position_ids", "position_embeddings"]
 
     cache = {"i": 0}
 
