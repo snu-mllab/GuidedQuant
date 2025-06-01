@@ -33,6 +33,6 @@ torchrun --nnodes=1 --nproc_per_node=1 --rdzv_endpoint=localhost:29400 ptq.py \
 --optimized_rotation_path $5 \
 --guided \
 --save_qmodel_path "checkpoint/checkpoint_quantized_7b_guided_wikitext2_g1/$2_$3_$4/ptq_model.pt" \
---input_tokens_path "../cache/tokens/(Llama-2-7b-hf)-wikitext2_s128_blk2048.pt" \
+--input_tokens_path "../cache/tokens/Llama-2-7b-hf-wikitext2_s128_blk2048.pt" \
 --num_groups 1 \
---saliency_path "../cache/saliency/(Llama-2-7b-hf)-wikitext2_s128_blk2048_g1"
+--saliency_path "../cache/saliency/Llama-2-7b-hf-wikitext2_s128_blk2048_g1"

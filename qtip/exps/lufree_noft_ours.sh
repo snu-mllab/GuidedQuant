@@ -18,16 +18,16 @@ LOG=./$METHOD/logs
 EXPNAMENOFT=2_${MODEL_SIZE}_${BIT}_saliency_no_ft
 
 if [ $MODEL_SIZE = "7b" ]; then
-  HESS="../cache/hessians/(Llama-2-7b-hf)-redpajama_s1024_blk4096_g4"
+  HESS="../cache/hessians/Llama-2-7b-hf-redpajama_s1024_blk4096_g4"
   GSAL=4
 elif [ $MODEL_SIZE = "13b" ]; then
-  HESS="../cache/hessians/(Llama-2-13b-hf)-redpajama_s1024_blk4096_g4"
+  HESS="../cache/hessians/Llama-2-13b-hf-redpajama_s1024_blk4096_g4"
   GSAL=4
 elif [ $MODEL_SIZE = "70b" ]; then
-  HESS="../cache/hessians/(Llama-2-70b-hf)-redpajama_s1024_blk4096_g2"
+  HESS="../cache/hessians/Llama-2-70b-hf-redpajama_s1024_blk4096_g2"
   GSAL=2
 elif [ $MODEL_SIZE = "70b_g1" ]; then
-  HESS="../cache/hessians/(Llama-2-70b-hf)-redpajama_s1024_blk4096_g1"
+  HESS="../cache/hessians/Llama-2-70b-hf-redpajama_s1024_blk4096_g1"
   GSAL=1
   MODEL_SIZE="70b"
 else

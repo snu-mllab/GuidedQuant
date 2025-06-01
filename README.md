@@ -38,15 +38,7 @@
       # CUDA 12.4
       pip install ap-gemv -i https://jusjinuk.me/whl/cu124
       ```
-3. (Optional) To reproduce weight-only vector & weight-and-activation quantization results, install the following dependencies.
-      ```bash
-      git clone https://github.com/Dao-AILab/fast-hadamard-transform 
-      cd fast-hadamard-transform
-      pip install .
-      cd ..
-      cd qtip/qtip-kernels
-      pip install .
-      ```
+
 
 
 # Pre-quantized Models
@@ -100,7 +92,9 @@ python inference_example.py -q
 In the paper, we report the further-optimized throughput of each model obtained by fusing the Q/K/V layer and the Up/Gate layer within every Transformer block.
 
 <details>
-<summary><b>Click to expand the commands for reproducing the throughput results in the paper.</b></summary>
+<summary><i>Click to expand the commands for reproducing the throughput results in the paper.</i></summary>
+<br>
+
 First, do `cd inference/`, and then
 
 1. For quantized models, run
@@ -124,14 +118,14 @@ First, do `cd inference/`, and then
 
 # Usage
 
-### Download the calibration data
+## Download the calibration data
 We provide the tokenized calibration data for Llama-2 and Llama-3 to reproduce the results in the paper.
 ```bash
 bash scripts/download_calibration.sh
 ```
 
 
-### Weight-only scalar quantization (SqueezeLLM, LNQ + GuidedQuant)
+## Weight-only scalar quantization (SqueezeLLM, LNQ + GuidedQuant)
 Below command saves the weight gradients and activation gradients (averaged into $NUM_GROUPS groups) and quantizes model with SqueezeLLM.
 ```bash
 bash scripts/run_sqllm.sh $MODEL_NAME $BITS $NUM_GROUPS
@@ -146,20 +140,78 @@ bash scripts/run_lnq.sh $MODEL_NAME $BITS $NUM_GROUPS
 ```
 <!-- **Note**:  -->
 
+> [!Note]
+> - For Llama-2 and Llama-3 pre-trained models, you can download pre-computed Hessian files from [this Hugging Face collection](https://huggingface.co/collections/jusjinuk/guidedquant-hessians-saliency-682c9e4362cadf615f34a74f). Remove the prefix `hessians-` from the file names, and place them in the `cache/hessians` directory, and run `scripts/run_lnq.sh` file as above.
 
-### Weight-only vector (QTIP + GuidedQuant)
+We currently support the following models: **Qwen3 (dense), Gemma3, Llama 3, and Llama 2**.
+To add support for other models, you will need to modify (but are not limited to) the following directories:
+- `any_precision/analyzer/architectures/`
+- `any_precision/analyzer/splitted_models/`
 
-To be updated.
+## Weight-only vector / Weight-and-activation quantization 
 
-### Weight-and-activation quantization (SpinQuant + GuidedQuant)
+<details>
+<summary><i>Click to expand the commands for reproducing the results in the paper.</i></summary>
+<br>
 
-To be updated.
+Currently, this section is only tested on Llama-2 model family. 
+
+### Dependencies & Preparation
+
+To reproduce weight-only vector & weight-and-activation quantization results, install the following dependencies.
+```bash
+git clone https://github.com/Dao-AILab/fast-hadamard-transform 
+cd fast-hadamard-transform
+pip install .
+cd ..
+cd qtip/qtip-kernels
+pip install .
+cd ../..
+```
+
+Also, you should downgrade the version of `transformers`.
+```bash
+pip install transformers==4.45.2
+```
+
+You need to have the GuidedQuant Hessian and saliency files generated using the commands from the **Weight-only scalar quantization** section, located in the `cache/hessians` and `cache/saliency` directories.
+Note that QTIP uses the [RedPajama (1024 × 4096)](https://github.com/snu-mllab/GuidedQuant/releases/download/v1.0.0/Llama-2-7b-hf-redpajama_s1024_blk4096.pt) for calibration, while SpinQuant uses [WikiText2 (128 × 2048)](https://github.com/snu-mllab/GuidedQuant/releases/download/v1.0.0/Llama-2-7b-hf-wikitext2_s128_blk2048.pt).
+
+Alternatively, you can download pre-computed Hessian and saliency files from [this Hugging Face collection](https://huggingface.co/collections/jusjinuk/guidedquant-hessians-saliency-682c9e4362cadf615f34a74f).
+Remove the prefix `hessians-` and `saliency-` from the file names, and place them in the `cache/hessians` and `cache/saliency` directories, respectively.
+These files correspond to the calibration data that is downloaded when running `bash scripts/download_calibration.sh`.
+
+### Reproduce the results of QTIP + GuidedQuant
+
+Run the following command to reproduce the results of QTIP + GuidedQuant.
+```bash
+cd qtip
+# Example: bash exps/lufree_noft_qtip.sh 1mad 7b 2
+bash exps/lufree_noft_qtip.sh $METHOD $MODEL_SIZE $BITS
+```
+
+### Reproduce the results of SpinQuant + GuidedQuant
+
+First, download the rotation matrices from the [SpinQuant GitHub repository](https://github.com/facebookresearch/SpinQuant) and place them in the `spin_quant/rotation/` directory. You can access the matrices directly via [this Google Drive link](https://drive.google.com/drive/folders/1R2zix4qeXBjcmgnJN1rny93cguJ4rEE8).
+
+Run the following command to reproduce Llama-2-7B results.
+```bash
+cd spin_quant
+# Example: bash scripts/2_eval_ptq_guided_save_wikitext2_7b_g1.sh meta-llama/Llama-2-7b-hf 4 4 4 "rotation/7B_W16A4KV4_lr_1.5_seed_0/R.bin"
+bash scripts/2_eval_ptq_guided_save_wikitext2_7b_g1.sh $MODEL_NAME $W_BITS $A_BITS $KV_BITS $ROTATION_PATH
+```
+
+See the full commands for reproducing the results in the paper in [scripts/2_eval_spinquant_quant_guided_g1.sh](./spin_quant/scripts/2_eval_spinquant_quant_guided_g1.sh).
+
+
+</details>
 
 
 
-### Evaluation
 
-Run the following command to evaluate the performance of the pre-trained / quantized / pre-quantized models.
+## Evaluation
+
+Run the following command to evaluate the perplexity of the pre-trained / quantized / pre-quantized models.
 ```bash
 python run_eval.py
 ```
