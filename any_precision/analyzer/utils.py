@@ -6,7 +6,8 @@ from .splitted_models import SplittedLlamaModel, SplittedQwen3Model, SplittedGem
 def load_model(model_str_or_model, dtype=torch.float16):
     """Returns a model from a string or a model object. If a string is passed, it will be loaded from the HuggingFace"""
     if isinstance(model_str_or_model, str):
-        if "gemma-3" in model_str_or_model:
+        # Qwen / Gemma models are more stable in bfloat16
+        if not "llama" in model_str_or_model.lower():
             dtype = torch.bfloat16
 
         model = AutoModelForCausalLM.from_pretrained(
