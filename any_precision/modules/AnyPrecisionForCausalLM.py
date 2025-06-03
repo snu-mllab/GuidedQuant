@@ -128,6 +128,7 @@ class AnyPrecisionForCausalLM(nn.Module):
             fuse_layers=False,
             precisions=None,
             local_dir=None,
+            torch_dtype=torch.float16,
     ):
         config = cls._load_config(quant_model_path, trust_remote_code)
 
@@ -138,6 +139,7 @@ class AnyPrecisionForCausalLM(nn.Module):
             fuse_layers=fuse_layers,
             trust_remote_code=trust_remote_code,
             local_dir=local_dir,
+            torch_dtype=torch_dtype,
         )
 
         return ap_model

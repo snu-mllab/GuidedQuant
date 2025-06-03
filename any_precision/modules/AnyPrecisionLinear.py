@@ -67,11 +67,11 @@ class AnyPrecisionLinear(nn.Module):
             w_bits = self.precision
 
         if x.numel() // x.shape[-1] > 1:
-            weight = ap_gemv.anyprec_dequant(self.qweight, self._buffers[f'lut{w_bits}'], w_bits)
+            weight = ap_gemv.anyprec_dequant(self.qweight, self._buffers[f'lut{w_bits}'].to(torch.float16), w_bits).to(x.dtype)
             x = torch.matmul(x, weight.T)
         else:
-            anyprec_gemv(x, self.qweight, self._buffers[f'lut{w_bits}'], self.output, w_bits)
-            x = self.output
+            anyprec_gemv(x.to(torch.float16), self.qweight, self._buffers[f'lut{w_bits}'].to(torch.float16), self.output, w_bits)
+            x = self.output.to(x.dtype)
 
         if self.bias is not None:
             x += self.bias

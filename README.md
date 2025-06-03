@@ -48,17 +48,20 @@
 | Instruction-tuned models | `Qwen3-32B`, `gemma-3-27b-it`, `Llama-3.1-8B-Instruct`, `Llama-3.3-70B-Instruct` | **[Link](https://huggingface.co/collections/jusjinuk/instruction-tuned-models-guidedquant-68334269c44cd3eb21f7bd61)** |
 |Pre-trained models | `Llama-2-7b-hf`, `Llama-2-13b-hf`, `Llama-2-70b-hf`, `Meta-Llama-3-8B`, `Meta-Llama-3-70B` | **[SqueezeLLM](https://huggingface.co/collections/jusjinuk/guidedquant-squeezellm-682ca2b6d71351d9bd94e94d)**, <br> **[LNQ](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-682c879c799d0ba767b57216)**, <br> **[LNQ+GuidedQuant](https://huggingface.co/collections/jusjinuk/guidedquant-lnq-gquant-682c89b60907f4a88caf6fa3)** |
 
-### Demo
+### Quick Start
 
 You could easily load and test them using `AnyPrecisionForCausalLM` class, as shown in the following example (runs on one RTX 3090).
 
 ```python
 from any_precision.modules.AnyPrecisionForCausalLM import AnyPrecisionForCausalLM
 from transformers import AutoTokenizer, TextStreamer
+import torch
 
-# model: Llama-3.3-70B-Instruct / method = GuidedQuant + LNQ / bits = 2 / num_groups = 1
 quantized_model_name = "jusjinuk/Llama-3.3-70B-Instruct-2bit-GuidedQuant-LNQ"
-model = AnyPrecisionForCausalLM.from_quantized(quantized_model_name)
+# Use float16 for Llama models, and bfloat16 for Qwen / Gemma models
+dtype = torch.float16 if "llama" in quantized_model_name.lower() else torch.bfloat16
+
+model = AnyPrecisionForCausalLM.from_quantized(quantized_model_name, torch_dtype=dtype)
 tokenizer = AutoTokenizer.from_pretrained(quantized_model_name)
 streamer = TextStreamer(tokenizer)
 
@@ -69,7 +72,8 @@ chat = [
 ]
 
 inputs = tokenizer.apply_chat_template(
-    chat, tokenize=True, return_tensors="pt", add_generation_prompt=True).to(model.device)
+    chat, tokenize=True, return_tensors="pt", add_generation_prompt=True
+).to(model.device)
 
 model.generate(inputs, 
     max_new_tokens=200, do_sample=False, temperature=1.0, streamer=streamer, pad_token_id=tokenizer.eos_token_id
