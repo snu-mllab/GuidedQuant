@@ -15,3 +15,5 @@ lm-eval==0.4.3
 peft==0.13.2
 huggingface-hub==0.32.0
 glog==0.3.1
+sentencepiece==0.2.0
+protobuf==6.31.1

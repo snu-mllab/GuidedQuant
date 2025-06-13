@@ -149,6 +149,14 @@ bash scripts/run_lnq.sh $MODEL_NAME $BITS $NUM_GROUPS
 <!-- **Note**:  -->
 
 > [!Note]
+> - The gradient extraction step in `scripts/run_sqllm.sh` requires:
+>   - 0.3 hrs on 1 A100 GPU for Llama-2-7B
+>   - 0.6 hrs on 2 A100 GPUs for Llama-2-13B
+>   - 2.7 hrs on 6–7 A100 GPUs for Llama-2-70B
+>
+>   The script automatically splits the model across available GPUs. To run gradient extraction separately, use the `-m gradients` option, then re-run `scripts/run_sqllm.sh`.
+> - The Hessian collection step in `scripts/run_lnq.sh` runs on a single RTX3090 GPU and speeds up linearly with more visible GPUs. To run it separately, add the `-m hessians` option and re-run `scripts/run_lnq.sh`.
+> - Other than gradient extraction and Hessian collection, the rest of the quantization script runs on a single RTX3090 GPU.
 > - For Llama-2 and Llama-3 pre-trained models, you can download pre-computed Hessian files from [this Hugging Face collection](https://huggingface.co/collections/jusjinuk/guidedquant-hessians-saliency-682c9e4362cadf615f34a74f). Remove the prefix `hessians-` from the file names, and place them in the `cache/hessians` directory, and run `scripts/run_lnq.sh` file as above.
 
 We currently support the following models: **Qwen3 (dense), Gemma3, Llama 3, and Llama 2**.
@@ -162,7 +170,7 @@ To add support for other models, you will need to modify (but are not limited to
 <summary><i>Click to expand the commands for reproducing the results in the paper.</i></summary>
 <br>
 
-Currently, this section is only tested on Llama-2 model family. 
+Currently, this section is only tested on Llama model family. 
 
 ### Dependencies & Preparation
 
