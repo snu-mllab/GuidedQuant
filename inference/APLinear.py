@@ -31,11 +31,23 @@ class APLinear(nn.Module):
             self.bias = None
 
         self.output = torch.zeros((1, 1, self.out_features), dtype=self.dtype, device='cuda')
+    
+    def gemm(self, x):
+        weight = anyprec_dequant(self.qweight, self.lut, self.bitwidth)
+        output = torch.matmul(x, weight.T)
+        return output
 
     def forward(self, x, **kwargs):
 
         assert(x.shape[0] == 1)
-        assert(x.shape[1] == 1)
+        
+        if x.shape[1] > 1:
+
+            output = self.gemm(x)
+
+            if self.bias is not None:
+                output += self.bias
+            return output
 
         # clear the output
         self.output.zero_()

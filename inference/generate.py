@@ -168,12 +168,19 @@ def generate(
     seq = empty
     input_pos = torch.arange(0, T, device=device, dtype=torch.int32)
 
-    ###
-    torch.cuda.reset_peak_memory_stats()
-    generated_tokens, new_probs = decode_n_tokens(model, prompt.view(batch_size, -1),
-                          input_pos, max_new_tokens, callback=callback, **sampling_kwargs)
-    peak_memory = torch.cuda.max_memory_allocated()
-    seq[:, 1:] = torch.cat(generated_tokens, dim=-1)
+    if T != 1:
+        next_token = prefill(model, prompt.view(batch_size, -1), input_pos, **sampling_kwargs).clone()
+        seq[:, T] = next_token.squeeze()
+        input_pos = torch.tensor([T], device=device, dtype=torch.int).view(1)
+        generated_tokens, new_probs = decode_n_tokens(model, next_token.view(batch_size, -1),
+                          input_pos, max_new_tokens-1, callback=callback, use_graph=False, **sampling_kwargs)
+        seq[:, T + 1:] = torch.cat(generated_tokens, dim=-1)
+
+    else:
+        generated_tokens, new_probs = decode_n_tokens(model, prompt.view(batch_size, -1),
+                              input_pos, max_new_tokens, callback=callback, **sampling_kwargs)
+        peak_memory = torch.cuda.max_memory_allocated()
+        seq[:, 1:] = torch.cat(generated_tokens, dim=-1)
 
     return seq
 
@@ -225,13 +232,13 @@ def load_model(model_name, device, backend,
 
     if not random_init:
         print("Loading weights ...", flush=True)
-        checkpoint = torch.load(checkpoint_path, mmap=True, weights_only=True)
+        checkpoint = torch.load(os.path.join(checkpoint_path, "converted_pytorch_model.bin"), mmap=True, weights_only=True)
         model.load_state_dict(checkpoint, assign=True, strict=False if (backend == "qtip") else True)
 
     print("Dispatching model to device ...", flush=True)
     model=model.to(device=device, dtype=dtype)
 
-    tokenizer = AutoTokenizer.from_pretrained(os.path.dirname(checkpoint_path))
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint_path)
    
     print("Model loaded.", flush=True)
     return model.eval(), tokenizer
@@ -253,17 +260,14 @@ def _get_model_size(model):
                     for p in itertools.chain(child.parameters(), child.buffers())
                 ]
             )
-            print(name)
             size = sum(p.numel() * p.dtype.itemsize for p in itertools.chain(child.parameters(), child.buffers()))
-            print(size/1024/1024/1024)
 
     return model_size, params
 
 B_INST, E_INST = "[INST]", "[/INST]"
 
 def main(
-    prompt: Union[int, str] = "Hello, my name is",
-    interactive: bool = False,
+    prompt: str = None,
     num_samples: int = 5,
     max_new_tokens: int = 100,
     batch_size: int = 1,
@@ -301,8 +305,11 @@ def main(
     device_sync(device=device) # MKG
     print(f"Time to load model: {time.time() - t0:.02f} seconds", flush=True)
 
-    # encode prompt
-    encoded = encode_bos(tokenizer, device=device)
+    # encode prompt (bos)
+    if prompt != None:
+        encoded = encode_tokens(tokenizer, prompt, device=device)
+    else:
+        encoded = encode_bos(tokenizer, device=device)
     prompt_length = encoded.size(-1)
 
     torch.manual_seed(1234)
@@ -321,11 +328,6 @@ def main(
         'accept_counts': [],
     }
     start = -1 if compile else 0
-
-    # Warm-up (for QTIP)
-    with torch.device(device):
-        model.setup_caches(max_batch_size=batch_size, max_seq_length=1)
-    model(torch.tensor([[1]]).cuda(), torch.tensor([0]).cuda())
 
     for i in range(start, num_samples):
         callback = lambda x : x
@@ -375,21 +377,12 @@ def main(
     print(f"Generated tokens: {max_new_tokens}")
     print(f"Average tokens/sec: {torch.mean(torch.tensor(aggregate_metrics['tokens_per_sec'])).item():.2f}")
     print(f"Std of tokens/sec: {torch.std(torch.tensor(aggregate_metrics['tokens_per_sec'])).item():.2f}")
-    print(f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB")
-
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Your CLI description.')
 
-    def int_or_str(x):
-        try:
-            return int(x)
-        except:
-            return x
-
-    parser.add_argument('--prompt', type=int_or_str, default=None, help="Input prompt. If it's an integer, will instead generate a synthetic prompt.")
-    parser.add_argument('--interactive', action='store_true', help='Whether to launch in interactive mode')
+    parser.add_argument('--prompt', type=str, default=None, help="Input prompt. Set to None to use only the bos token for benchmarking")
     parser.add_argument('--num_samples', type=int, default=5, help='Number of samples.')
     parser.add_argument('--max_new_tokens', type=int, default=100, help='Maximum number of new tokens.')
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size to benchmark with')
@@ -400,7 +393,7 @@ if __name__ == '__main__':
     parser.add_argument('--profile', type=Path, default=None, help='Profile path.')
     parser.add_argument('--device', type=str, default=default_device, help='Device to use')
     parser.add_argument('--model_name', type=str, default=None, help='model_name', 
-                        choices=['Meta-Llama-3-8B-Instruct', 'Phi-3-medium-4k-instruct', 'Meta-Llama-2-7B', 'Meta-Llama-2-13B', 'Meta-Llama-2-70B'])
+                        choices=['Meta-Llama-3-8B-Instruct', 'Meta-Llama-2-7B', 'Meta-Llama-2-13B', 'Meta-Llama-2-70B'])
     parser.add_argument('--bitwidth', type=int, default=None, help='bitwidth', choices=[2,3,4,16])
     parser.add_argument('--checkpoint_path', type=str, default=None, help='checkpoint path')
     parser.add_argument('--config_path', type=str, default=None, help='QTIP config path')
@@ -412,7 +405,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(
-        args.prompt, args.interactive, args.num_samples, args.max_new_tokens, args.batch_size, args.top_k,
+        args.prompt, args.num_samples, args.max_new_tokens, args.batch_size, args.top_k,
         args.temperature, args.compile, args.compile_prefill, args.profile, 
         args.device, args.model_name, args.backend, args.bitwidth, 
         args.checkpoint_path, args.config_path, 
