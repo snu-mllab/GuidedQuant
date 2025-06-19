@@ -254,6 +254,7 @@ This code heavily relies on the following repositories:
 - [QTIP](https://github.com/Cornell-RelaxML/qtip)
 - [SpinQuant](https://github.com/facebookresearch/SpinQuant)
 - [Fast Hadamard Transform](https://github.com/Dao-AILab/fast-hadamard-transform)
+- [gpt-fast](https://github.com/pytorch-labs/gpt-fast)
 
 We thank the authors for their open-source implementations and contributions to the community.
 
