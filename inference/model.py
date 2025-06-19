@@ -51,10 +51,13 @@ class ModelArgs:
         return cls(**transformer_configs[name])
 
 transformer_configs = {
-    "Meta-Llama-3-8B-Instruct": dict(model_name="Meta-Llama-3-8B-Instruct", block_size=8192, n_layer=32, n_head=32, n_local_heads=8, dim=4096, intermediate_size=14336, vocab_size=128256, rope_base=500000),
-    "Meta-Llama-2-7B": dict(model_name="Meta-Llama-2-7B", block_size=4096, n_layer=32, n_head=32, n_local_heads=32, dim=4096, intermediate_size=11008, vocab_size=32000, rope_base=10000),
-    "Meta-Llama-2-13B": dict(model_name="Meta-Llama-2-13B", block_size=4096, n_layer=40, n_head=40, n_local_heads=40, dim=5120, intermediate_size=13824, vocab_size=32000, rope_base=10000),
-    "Meta-Llama-2-70B": dict(model_name="Meta-Llama-2-70B", block_size=4096, n_layer=80, n_head=64, n_local_heads=8, dim=8192, intermediate_size=28672, vocab_size=32000, rope_base=10000),
+    "meta-llama/Meta-Llama-3-8B": dict(model_name="Meta-Llama-3-8B", block_size=8192, n_layer=32, n_head=32, n_local_heads=8, dim=4096, intermediate_size=14336, vocab_size=128256, rope_base=500000),
+    "meta-llama/Meta-Llama-3-8B-Instruct": dict(model_name="Meta-Llama-3-8B-Instruct", block_size=8192, n_layer=32, n_head=32, n_local_heads=8, dim=4096, intermediate_size=14336, vocab_size=128256, rope_base=500000),
+    "meta-llama/Meta-Llama-3.1-8B": dict(model_name="Meta-Llama-3.1-8B", block_size=8192, n_layer=32, n_head=32, n_local_heads=8, dim=4096, intermediate_size=14336, vocab_size=128256, rope_base=500000),
+    "meta-llama/Meta-Llama-3.1-8B-Instruct": dict(model_name="Meta-Llama-3.1-8B-Instruct", block_size=8192, n_layer=32, n_head=32, n_local_heads=8, dim=4096, intermediate_size=14336, vocab_size=128256, rope_base=500000),
+    "meta-llama/Llama-2-7b": dict(model_name="Llama-2-7b", block_size=4096, n_layer=32, n_head=32, n_local_heads=32, dim=4096, intermediate_size=11008, vocab_size=32000, rope_base=10000),
+    "meta-llama/Llama-2-13b": dict(model_name="Llama-2-13b", block_size=4096, n_layer=40, n_head=40, n_local_heads=40, dim=5120, intermediate_size=13824, vocab_size=32000, rope_base=10000),
+    "meta-llama/Llama-2-70b": dict(model_name="Llama-2-70b", block_size=4096, n_layer=80, n_head=64, n_local_heads=8, dim=8192, intermediate_size=28672, vocab_size=32000, rope_base=10000),
 }
 
 class KVCache(nn.Module):
@@ -76,7 +79,7 @@ class KVCache(nn.Module):
         return k_out, v_out
 
 class Transformer(nn.Module):
-    def __init__(self, dtype, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None, halve_layers=False) -> None:
+    def __init__(self, dtype, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None, halve_layers=False, fuse_linears=True) -> None:
         super().__init__()
         self.config = config
         self.dtype = dtype
@@ -86,7 +89,7 @@ class Transformer(nn.Module):
             config.n_layer = config.n_layer // 2
 
         self.tok_embeddings = nn.Embedding(config.vocab_size, config.dim)
-        self.layers = nn.ModuleList(TransformerBlock(config, linear_class, linear_kwargs) for _ in range(config.n_layer))
+        self.layers = nn.ModuleList(TransformerBlock(config, linear_class, linear_kwargs, fuse_linears) for _ in range(config.n_layer))
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.output = nn.Linear(config.dim, config.vocab_size, bias=False)
 
@@ -127,15 +130,15 @@ class Transformer(nn.Module):
         return logits
 
     @classmethod
-    def from_name(cls, dtype, name: str, linear_class=nn.Linear, linear_kwargs=None, halve_layers=False) -> "Transformer":
-        return cls(dtype, ModelArgs.from_name(name), linear_class=linear_class, linear_kwargs=linear_kwargs, halve_layers=halve_layers)
+    def from_name(cls, dtype, name: str, linear_class=nn.Linear, linear_kwargs=None, halve_layers=False, fuse_linears=True) -> "Transformer":
+        return cls(dtype, ModelArgs.from_name(name), linear_class=linear_class, linear_kwargs=linear_kwargs, halve_layers=halve_layers, fuse_linears=fuse_linears)
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None) -> None:
+    def __init__(self, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None, fuse_linears=True) -> None:
         super().__init__()
-        self.attention = Attention(config, linear_class, linear_kwargs)
-        self.feed_forward = FeedForward(config, linear_class, linear_kwargs)
+        self.attention = Attention(config, linear_class, linear_kwargs, fuse_linears)
+        self.feed_forward = FeedForward(config, linear_class, linear_kwargs, fuse_linears)
 
         if "llama" in config.model_name.lower():
             self.input_layernorm = RMSNorm(config.dim, config.norm_eps)
@@ -165,12 +168,18 @@ class TransformerBlock(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None) -> None:
+    def __init__(self, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None, fuse_linears=True) -> None:
         super().__init__()
         assert config.dim % config.n_head == 0
 
         total_head_dim = (config.n_head + 2 * config.n_local_heads) * config.head_dim
-        self.wqkv = linear_class(config.dim, total_head_dim, bias=False, **(linear_kwargs or {}))
+        if fuse_linears:
+            self.wqkv = linear_class(config.dim, total_head_dim, bias=False, **(linear_kwargs or {}))
+        else:
+            self.wq = linear_class(config.dim, config.n_head*config.head_dim, bias=False, **(linear_kwargs or {}))
+            self.wk = linear_class(config.dim, config.n_local_heads*config.head_dim, bias=False, **(linear_kwargs or {}))
+            self.wv = linear_class(config.dim, config.n_local_heads*config.head_dim, bias=False, **(linear_kwargs or {}))
+
         self.wo = linear_class(config.dim, config.dim, bias=False, **(linear_kwargs or {}))
 
         self.kv_cache = None
@@ -180,6 +189,7 @@ class Attention(nn.Module):
         self.n_local_heads = config.n_local_heads
         self.dim = config.dim
         self.config = config
+        self.fuse_linears = fuse_linears
 
         self.scaling = 1/ math.sqrt(config.head_dim)
 
@@ -197,7 +207,12 @@ class Attention(nn.Module):
         bsz, seqlen, _ = x.shape
 
         kv_size = self.n_local_heads * self.head_dim
-        q, k, v = self.wqkv(x).split([self.dim, kv_size, kv_size], dim=-1)
+        if self.fuse_linears:
+            q, k, v = self.wqkv(x).split([self.dim, kv_size, kv_size], dim=-1)
+        else:
+            q = self.wq(x)
+            k = self.wk(x)
+            v = self.wv(x)
 
         q = q.view(bsz, seqlen, self.n_head, self.head_dim)
         k = k.view(bsz, seqlen, self.n_local_heads, self.head_dim)
@@ -225,16 +240,29 @@ class Attention(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None) -> None:
+    def __init__(self, config: ModelArgs, linear_class=nn.Linear, linear_kwargs=None, fuse_linears=True) -> None:
         super().__init__()
         self.config = config
-        self.w1w3 = linear_class(config.dim, config.intermediate_size*2, bias=False, **(linear_kwargs or {}))
+        self.fuse_linears = fuse_linears
+
+        if fuse_linears:
+            self.w1w3 = linear_class(config.dim, config.intermediate_size*2, bias=False, **(linear_kwargs or {}))
+        else:
+            self.w1 = linear_class(config.dim, config.intermediate_size, bias=False, **(linear_kwargs or {}))
+            self.w3 = linear_class(config.dim, config.intermediate_size, bias=False, **(linear_kwargs or {}))
         self.w2 = linear_class(config.intermediate_size, config.dim, bias=False, **(linear_kwargs or {}))
 
         self.act_fn = F.silu
+        
+        self.fuse_linears = fuse_linears
 
     def forward(self, x: Tensor) -> Tensor:
-        w1_out, w3_out = self.w1w3(x).split([self.config.intermediate_size, self.config.intermediate_size], dim=-1)
+        if self.fuse_linears:
+            w1_out, w3_out = self.w1w3(x).split([self.config.intermediate_size, self.config.intermediate_size], dim=-1)
+        else:
+            w1_out = self.w1(x)
+            w3_out = self.w3(x)
+
         return self.w2(self.act_fn(w1_out) * w3_out)
 
 def rotate_half(x):

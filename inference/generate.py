@@ -18,7 +18,9 @@ import torch._inductor.config
 from transformers import AutoTokenizer
 from APLinear import APLinear
 from LUTGEMMLinear import LUTGEMMLinear
-from lib.linear.quantized_linear import QuantizedLinear as QTIPLinear
+
+sys.path.append(os.path.abspath("../qtip/lib/linear"))
+from quantized_linear import QuantizedLinear as QTIPLinear
 
 import warnings
 
@@ -48,7 +50,6 @@ default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 wd = Path(__file__).parent.parent.resolve()
 sys.path.append(str(wd))
 
-#from model_no_fuse import Transformer
 from model import Transformer
 
 def multinomial_sample_one_no_sync(probs_sort): # Does multinomial sampling without a cuda synchronization
@@ -208,7 +209,7 @@ def load_model(model_name, device, backend,
             linear_kwargs['group_size'] = -1
         case "qtip":
             import json
-            with open(config_path, "r") as config_file:
+            with open(os.path.join(checkpoint_path, "config.json"), "r") as config_file:
                 config = json.load(config_file)
             linear_class = QTIPLinear
             linear_kwargs['td_x'] = config['quip_params']['td_x']
@@ -228,6 +229,7 @@ def load_model(model_name, device, backend,
         linear_class=linear_class,
         linear_kwargs=linear_kwargs,
         halve_layers=halve_layers,
+        fuse_linears=(not backend == "qtip")
     )
 
     if not random_init:
@@ -237,8 +239,7 @@ def load_model(model_name, device, backend,
 
     print("Dispatching model to device ...", flush=True)
     model=model.to(device=device, dtype=dtype)
-
-    tokenizer = AutoTokenizer.from_pretrained(checkpoint_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
    
     print("Model loaded.", flush=True)
     return model.eval(), tokenizer
@@ -315,6 +316,17 @@ def main(
     torch.manual_seed(1234)
     model_size, params = _get_model_size(model)
 
+    # warm up before compile
+    y = generate(
+        model,
+        encoded,
+        max_new_tokens,
+        batch_size=batch_size,
+        callback=lambda x : x,
+        temperature=temperature,
+        top_k=top_k,
+    )
+
     if compile:
         global decode_one_token, prefill
         mode = 'max-autotune-no-cudagraphs' if compile == 1 else 'max-autotune'
@@ -330,8 +342,6 @@ def main(
     start = -1 if compile else 0
 
     for i in range(start, num_samples):
-        callback = lambda x : x
-        
         torch.cuda.synchronize()
         t0 = time.perf_counter()
 
@@ -347,7 +357,7 @@ def main(
                 encoded,
                 max_new_tokens,
                 batch_size=batch_size,
-                callback=callback,
+                callback=lambda x : x,
                 temperature=temperature,
                 top_k=top_k,
             )
@@ -392,8 +402,7 @@ if __name__ == '__main__':
     parser.add_argument('--compile_prefill', action='store_true', help='Whether to compile the prefill (improves prefill perf, but higher compile times)')
     parser.add_argument('--profile', type=Path, default=None, help='Profile path.')
     parser.add_argument('--device', type=str, default=default_device, help='Device to use')
-    parser.add_argument('--model_name', type=str, default=None, help='model_name', 
-                        choices=['Meta-Llama-3-8B-Instruct', 'Meta-Llama-2-7B', 'Meta-Llama-2-13B', 'Meta-Llama-2-70B'])
+    parser.add_argument('--model_name', type=str, default=None, help='model_name') 
     parser.add_argument('--bitwidth', type=int, default=None, help='bitwidth', choices=[2,3,4,16])
     parser.add_argument('--checkpoint_path', type=str, default=None, help='checkpoint path')
     parser.add_argument('--config_path', type=str, default=None, help='QTIP config path')

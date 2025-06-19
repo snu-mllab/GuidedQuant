@@ -107,11 +107,22 @@ First, do `cd inference/`, and then
 
 1. For quantized models, run
       ```bash
+      # SqueezeLLM models
       python sqllm_llama_convert_fuse.py --ckpt_dir <path_to_quantized_ckpt> --bitwidth <bitwidth>
       python generate.py --compile 2 --num_samples 5 \
             --model_name ${model} --bitwidth ${BITWIDTH} --dtype "float16" \
             --checkpoint_path ${checkpoint_path} \
             --backend ap --max_new_tokens 100
+   
+      # QTIP models
+      # Make sure you have installed the QTIP kernels (../qtip/) 
+      # and fast-hadamard-transform (https://github.com/Dao-AILab/fast-hadamard-transform).
+      python qtip_llama_convert_no_fuse.py --ckpt_dir <path_to_quantized_ckpt>
+      python generate.py --compile 2 --num_samples 5 \
+            --model_name ${model} --bitwidth ${BITWIDTH} --dtype "float16" \
+            --checkpoint_path ${checkpoint_path} \
+            --backend qtip --max_new_tokens 100
+      
       ```
 
 2. For pre-trained models (without quantization), run
