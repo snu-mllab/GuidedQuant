@@ -45,7 +45,7 @@
 
 | Type | Models | 🤗 Hugging Face |
 |:---|:---|:---|
-| Instruction-tuned models | `Qwen3-32B`, `gemma-3-27b-it`, `Llama-3.1-8B-Instruct`, `Llama-3.3-70B-Instruct` | **[Link](https://huggingface.co/collections/jusjinuk/instruction-tuned-models-guidedquant-68334269c44cd3eb21f7bd61)** |
+| Instruction-tuned models | `Qwen3-32B`, `gemma-3-27b-it`, `Llama-3.1-8B-Instruct`,`Llama-3.1-70B-Instruct`, `Llama-3.3-70B-Instruct`, `Llama-3.2-1B-Instruct`, `Llama-3.2-3B-Instruct` | **[Link](https://huggingface.co/collections/jusjinuk/instruction-tuned-models-guidedquant-68334269c44cd3eb21f7bd61)** |
 |Pre-trained models | `Llama-2-7b-hf`, `Llama-2-13b-hf`, `Llama-2-70b-hf`, `Meta-Llama-3-8B`, `Meta-Llama-3-70B` | **[SqueezeLLM](https://huggingface.co/collections/jusjinuk/pre-trained-models-squeezellm-682ca2b6d71351d9bd94e94d)**, <br> **[LNQ](https://huggingface.co/collections/jusjinuk/pre-trained-models-lnq-682c879c799d0ba767b57216)**, <br> **[LNQ+GuidedQuant](https://huggingface.co/collections/jusjinuk/pre-trained-models-lnq-gquant-682c89b60907f4a88caf6fa3)**, <br> **[QTIP+GuidedQuant](https://huggingface.co/collections/jusjinuk/pre-trained-models-qtip-gquant-685396d5b5537d0bee74d1e2)** |
 
 ## Quick Start
@@ -246,7 +246,12 @@ python run_eval.py
 Add `--downstream` option to evaluate on downstream tasks using `lm-eval-harness` library.
 
 
+---
+#### Comparison results with [YAQA](https://arxiv.org/abs/2505.22988)
 
+YAQA is a more recent quantization method that approximates the Fisher information matrix using Kronecker-decomposed matrices. Compared to GuidedQuant, YAQA achieves better performance but requires more GPU resources to quantize a model (e.g., approximately 6 hours on 8×H100 GPUs for the Llama-2-7B model).
+
+Evaluation results based on the experimental setup described in their paper are summarized in this [table](https://docs.google.com/spreadsheets/d/1Gm27k6ZiomUSYK9UFy_wbvgiRmrJCR_Qjywsmvj-NOE/edit?usp=sharing).
 
 # Acknowledgement
 This code heavily relies on the following repositories:
