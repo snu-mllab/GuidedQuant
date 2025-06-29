@@ -254,10 +254,11 @@ YAQA is a more recent quantization method that approximates the Fisher informati
 Evaluation results based on the experimental setup described in their paper are summarized in this [table](https://docs.google.com/spreadsheets/d/1Gm27k6ZiomUSYK9UFy_wbvgiRmrJCR_Qjywsmvj-NOE/edit?usp=sharing).
 
 # Acknowledgement
-This code heavily relies on the following repositories:
+This code is heavily based on the following repositories:
 - [Any-Precision-LLM](https://github.com/SNU-ARC/any-precision-llm)
 - [QTIP](https://github.com/Cornell-RelaxML/qtip)
 - [SpinQuant](https://github.com/facebookresearch/SpinQuant)
+- [AQLM](https://github.com/Vahe1994/AQLM)
 - [Fast Hadamard Transform](https://github.com/Dao-AILab/fast-hadamard-transform)
 - [gpt-fast](https://github.com/pytorch-labs/gpt-fast)
 
